@@ -60,7 +60,21 @@ export default function BoxDetailScreen() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => setItemPhoto(ev.target.result);
+    reader.onload = ev => {
+      // Resize to max 400px and compress to JPEG before storing
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 400;
+        let w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = (h * MAX) / w; w = MAX; }
+        else if (h > MAX)     { w = (w * MAX) / h; h = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        setItemPhoto(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = ev.target.result;
+    };
     reader.readAsDataURL(file);
   }
 
