@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────
 import {
   collection, doc, setDoc, deleteDoc,
-  onSnapshot, getDocs, query, orderBy, getDoc,
+  onSnapshot, getDocs, query, orderBy, limit,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -12,9 +12,11 @@ function boxesCol(code) {
   return collection(db, 'households', code, 'boxes');
 }
 
+// Check if a household exists by looking for any boxes in its subcollection
+// (the parent document is never explicitly created)
 export async function householdExists(code) {
-  const snap = await getDoc(doc(db, 'households', code));
-  return snap.exists();
+  const snap = await getDocs(query(boxesCol(code), limit(1)));
+  return !snap.empty;
 }
 
 export async function syncBoxToCloud(code, box) {

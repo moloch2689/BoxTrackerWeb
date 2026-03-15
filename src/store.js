@@ -69,12 +69,13 @@ export function addItemToBox(boxId, { name, desc, qty }) {
   return item;
 }
 
-export function updateItem(boxId, itemId, { name, desc, qty }) {
+export function updateItem(boxId, itemId, { name, desc, qty, photo }) {
   const box = boxes.find(b => b.id === boxId);
   if (!box) return;
   const item = box.items.find(i => i.id === itemId);
   if (!item) return;
   item.name = name; item.desc = desc; item.qty = qty;
+  if (photo !== undefined) item.photo = photo;
   boxes = [...boxes];
   notify();
   if (_householdCode) syncBoxToCloud(_householdCode, box).catch(console.warn);

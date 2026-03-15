@@ -5,6 +5,34 @@ import { boxes, updateBox, addItemToBox, updateItem, deleteBox, deleteItem, subs
 import { colors } from '../theme';
 import { SectionHeading, Card, Badge, Modal, PrimaryButton, GhostButton, FormField } from '../components/UI';
 
+function PhotoPicker({ photo, onChange, onClear }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: colors.text3, marginBottom: 6, fontFamily: 'monospace', letterSpacing: 1 }}>PHOTO</div>
+      {photo ? (
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <img src={photo} alt="item" style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8 }} />
+          <button onClick={onClear} style={{
+            position: 'absolute', top: -8, right: -8, background: colors.red,
+            color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22,
+            fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
+        </div>
+      ) : (
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+          background: '#111', border: `1px dashed ${colors.border}`,
+          borderRadius: 8, padding: '10px 14px', color: colors.text2, fontSize: 13,
+        }}>
+          <span style={{ fontSize: 20 }}>📷</span>
+          <span>Take photo or choose from gallery</span>
+          <input type="file" accept="image/*" capture="environment" onChange={onChange} style={{ display: 'none' }} />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export default function BoxDetailScreen() {
   const { boxId } = useParams();
   const navigate = useNavigate();
@@ -23,9 +51,18 @@ export default function BoxDetailScreen() {
   const [boxNotes, setBoxNotes]       = useState('');
 
   // Item fields
-  const [itemName, setItemName] = useState('');
-  const [itemDesc, setItemDesc] = useState('');
-  const [itemQty,  setItemQty]  = useState('1');
+  const [itemName,  setItemName]  = useState('');
+  const [itemDesc,  setItemDesc]  = useState('');
+  const [itemQty,   setItemQty]   = useState('1');
+  const [itemPhoto, setItemPhoto] = useState(null);
+
+  function handlePhotoChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setItemPhoto(ev.target.result);
+    reader.readAsDataURL(file);
+  }
 
   useEffect(() => subscribe(() => setTick(t => t + 1)), []);
 
@@ -45,18 +82,18 @@ export default function BoxDetailScreen() {
 
   function handleAddItem() {
     if (!itemName.trim()) return alert('Item name required.');
-    addItemToBox(boxId, { name: itemName.trim(), desc: itemDesc.trim(), qty: parseInt(itemQty)||1 });
-    setShowAddItem(false); setItemName(''); setItemDesc(''); setItemQty('1');
+    addItemToBox(boxId, { name: itemName.trim(), desc: itemDesc.trim(), qty: parseInt(itemQty)||1, photo: itemPhoto });
+    setShowAddItem(false); setItemName(''); setItemDesc(''); setItemQty('1'); setItemPhoto(null);
   }
 
   function openEditItem(item) {
-    setItemName(item.name); setItemDesc(item.desc||''); setItemQty(String(item.qty||1));
+    setItemName(item.name); setItemDesc(item.desc||''); setItemQty(String(item.qty||1)); setItemPhoto(item.photo||null);
     setShowEditItem(item);
   }
 
   function handleSaveItem() {
     if (!itemName.trim()) return alert('Item name required.');
-    updateItem(boxId, showEditItem.id, { name: itemName.trim(), desc: itemDesc.trim(), qty: parseInt(itemQty)||1 });
+    updateItem(boxId, showEditItem.id, { name: itemName.trim(), desc: itemDesc.trim(), qty: parseInt(itemQty)||1, photo: itemPhoto });
     setShowEditItem(null);
   }
 
@@ -136,6 +173,10 @@ export default function BoxDetailScreen() {
       ) : (
         box.items.map(item => (
           <Card key={item.id} style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {item.photo && (
+              <img src={item.photo} alt={item.name}
+                style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', marginRight: 12, flexShrink: 0 }} />
+            )}
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
               {item.desc ? <div style={{ fontSize: 13, color: colors.text2, marginBottom: 4 }}>{item.desc}</div> : null}
@@ -165,11 +206,12 @@ export default function BoxDetailScreen() {
 
       {/* Add Item Modal */}
       <Modal visible={showAddItem} onClose={() => setShowAddItem(false)} title="ADD ITEM">
-        <FormField label="Item Name *"   value={itemName} onChange={setItemName} placeholder="e.g. Winter jacket" />
-        <FormField label="Description"   value={itemDesc} onChange={setItemDesc} placeholder="Optional description" />
-        <FormField label="Quantity"      value={itemQty}  onChange={setItemQty}  type="number" placeholder="1" />
+        <FormField label="Item Name *" value={itemName} onChange={setItemName} placeholder="e.g. Winter jacket" />
+        <FormField label="Description" value={itemDesc} onChange={setItemDesc} placeholder="Optional description" />
+        <FormField label="Quantity"    value={itemQty}  onChange={setItemQty}  type="number" placeholder="1" />
+        <PhotoPicker photo={itemPhoto} onChange={handlePhotoChange} onClear={() => setItemPhoto(null)} />
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-          <GhostButton   label="Cancel"   onClick={() => setShowAddItem(false)} />
+          <GhostButton   label="Cancel"   onClick={() => { setShowAddItem(false); setItemPhoto(null); }} />
           <PrimaryButton label="Add Item" onClick={handleAddItem} />
         </div>
       </Modal>
@@ -179,6 +221,7 @@ export default function BoxDetailScreen() {
         <FormField label="Item Name *" value={itemName} onChange={setItemName} placeholder="Item name" />
         <FormField label="Description" value={itemDesc} onChange={setItemDesc} placeholder="Description" />
         <FormField label="Quantity"    value={itemQty}  onChange={setItemQty}  type="number" placeholder="1" />
+        <PhotoPicker photo={itemPhoto} onChange={handlePhotoChange} onClear={() => setItemPhoto(null)} />
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           <GhostButton   label="Cancel" onClick={() => setShowEditItem(null)} />
           <PrimaryButton label="Save"   onClick={handleSaveItem} />
